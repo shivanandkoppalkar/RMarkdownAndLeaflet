@@ -1,0 +1,243 @@
+---
+title: "Map of U.S. States by Population"
+author: "Shivanand R Koppalkar"
+date: "April 28, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+<ul>
+  <li> Each marker represents the corresponding U.S. state flag and is placed at the approximate geographic center of each state. Alaska and Hawaii are placed just off the West Coast for convenience. (The data for the longitude and latitude of the center of each state is taken from the *state.center* list which is part of the *state* data sets from the *datasets* R package.) </li>
+ 
+ <li> Click on a marker to see some information about each state. (The data about the population of each state is taken from the 2010 census and can be found, for example, in [Wikipedia](https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_population)) </li>
+ 
+ <li> Hover over the map to see the highlighted boundary of each state and the name of the state. </li>
+</ul>  
+ 
+
+```{r, warning=FALSE, message=FALSE}
+
+# Loading the required packages:
+
+library(leaflet)
+
+library(maps)
+
+library(RColorBrewer)
+
+```
+
+
+```{r}
+
+# Generating the "state.db" data frame using the incorporated in the 
+# "base" R package data sets - "state.abb", "state.center", "state.division",
+# "state.region" and "state.x77":
+
+state.db <- data.frame(state.abb, state.center[[1]], state.center[[2]], state.division, state.name, state.region, state.x77)
+
+state.db$state.abb <- as.character(state.db$state.abb)
+#class(state.db$state.abb)
+state.db$state.name <- as.character(state.db$state.name)
+#class(state.db$state.name)
+
+ind <- match("state.region", colnames(state.db))
+
+colnames(state.db)[1:ind] <- c("Abbreviation", "lng", "lat", "Division", "Name", "Region")
+
+```
+
+
+```{r}
+
+# Generating the icon URLs for the 50 ".png" files with the flags of each 
+# state (which we will later use as markers):
+
+names <- gsub(pattern = " ", replacement = "_", x = state.name)
+
+
+iconURL <- lapply(names, function(name){
+
+     paste("C:/Week2/", name, ".png", sep = "")
+})
+
+listFlags <- icons(iconUrl = iconURL, iconWidth = 30, iconHeight = 30, iconAnchorX = 15, iconAnchorY = 15)
+
+```
+
+
+```{r}
+
+# Using the package "maps" to generate a map of the states in the USA:
+
+mapStates = map("state", fill = TRUE, plot = FALSE)
+
+```
+
+
+```{r}
+
+# Creating the color palette for the map of the US states:
+
+bins <- c(0, 500000, 4000000, 8000000, 15000000, 25000000, 30000000, 
+          35000000, 40000000)
+
+pal <- colorBin("YlOrRd", domain = state.db$Population, bins = bins)
+
+```
+
+
+```{r}
+
+stateNames <- gsub(pattern = ":main", replacement = "", x = mapStates$names)
+
+stateNames <- sapply(stateNames, function(name){
+    
+         paste(toupper(substr(x = name, 
+                              start = 1, 
+                              stop = 1)), 
+                       substr(x = name, 
+                              start = 2, 
+                              stop = nchar(name)), 
+                       sep = "")
+
+    
+})
+
+stateNames <- as.vector(stateNames, mode = "character")
+
+
+stateNamesUpper <- sapply(stateNames, function(name){
+    
+         if(gregexpr(pattern = " ", name)[[1]][1] > 0){
+             
+               paste(substr(x = name, 
+                            start = 1,
+                            stop = gregexpr(pattern = " ", name)[[1]][1]),
+                     toupper(substr(x = name, 
+                              start = gregexpr(pattern = " ", name)[[1]][1] + 1, 
+                              stop = gregexpr(pattern = " ", name)[[1]][1] + 1)), 
+                     substr(x = name, 
+                            start = gregexpr(pattern = " ", name)[[1]][1] + 2, 
+                            stop = nchar(name)), 
+                     sep = "")
+
+         }else paste(name)
+    
+})
+
+
+stateNamesUpper <- as.vector(stateNamesUpper, mode = "character")
+
+stateNamesUpper[8] <- "District Of Columbia" 
+
+
+
+states <- c("California", "Texas", "Florida", "New York", "Pennsylvania",
+            "Illinois", "Ohio", "Georgia", "North Carolina", "Michigan",
+            "New Jersey", "Virginia", "Washington", "Arizona", "Massachusetts",
+            "Tennessee", "Indiana", "Missouri", "Maryland", "Wisconsin",
+            "Colorado", "Minnesota", "South Carolina", "Alabama", "Louisiana",
+            "Kentucky", "Oregon", "Oklahoma", "Connecticut", "Iowa",
+            "Utah", "Mississippi", "Arkansas", "Nevada", "Kansas",
+            "New Mexico", "Nebraska", "West Virginia", "Idaho", "Hawaii",
+            "New Hampshire", "Maine", "Rhode Island", "Montana", "Delaware", 
+            "South Dakota", "North Dakota", "Alaska", "Vermont", "Wyoming")
+
+
+population.current <- c(37254503, 25146105, 18804623, 19378087, 12702887,
+                        12831549, 11536725, 9688681, 9535692, 9884129,
+                        8791936, 8001045, 6724543, 6392307, 6547817, 6346275,
+                        6484229, 5988927, 5773785, 5687289, 5029324, 
+                        5303925, 4625401, 4780127, 4533479, 4339349,
+                        3831073, 3751616, 3574118, 3046869, 2763888,
+                        2968103, 2915958, 2700691, 2853132, 2059192,
+                        1826341, 1853011, 1567652, 1360301, 1316466,
+                        1328361, 1052931, 989417, 897936, 814191, 672591,
+                        710249, 625745, 563767)
+
+
+df <- data.frame(Name = states, Population.2010 = population.current)
+df <- df[order(df$Name), ]
+rownames(df) <- 1:nrow(df)
+df$Name <- as.character(df$Name)
+
+
+state.db <- merge(state.db, df, by = "Name")
+
+mapStates$namesUpper <- stateNamesUpper
+mapStates$namesUpper[23] <- "Michigan" 
+mapStates$namesUpper[24] <- "Michigan" 
+
+
+common.names <- intersect(df$Name, mapStates$namesUpper)
+# Alaska, Hawaii
+indices <- match(c("Alaska", "Hawaii"), df$Name)
+
+```
+
+
+```{r}
+
+common.names <- intersect(df$Name, mapStates$namesUpper)
+
+us.map <- data.frame(Name = mapStates$namesUpper)
+us.map$Name <- as.character(us.map$Name)
+us.map$Population <- vector(mode = "integer", length = nrow(us.map))
+
+for(i in 1:nrow(us.map)){
+ if(us.map$Name[i] %in% common.names){
+    
+    us.map$Population[i] <- df[df$Name == us.map$Name[i], ]$Population.2010
+ }}
+
+```
+
+
+```{r}
+
+info <- sapply(as.character(state.db$Name), function(name){
+    
+    paste(name, ",", "<br/>Abbreviation: ", state.db[state.db$Name == name, "Abbreviation"], "," , "<br/>Population: ", state.db[state.db$Name == name, "Population.2010"], ",", "<br/>Area: ", state.db[state.db$Name == name, "Area"], sep = "")
+})
+
+info <- as.vector(info, mode = "character")
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+
+state.db %>% 
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers(icon = listFlags, popup = info, options = markerOptions(opacity = 0.7)) %>%
+addPolygons(lng = mapStates$x, lat = mapStates$y, 
+            smoothFactor = 0.2,
+            fillOpacity = 0.6, 
+            fillColor = ~pal(us.map$Population), 
+            stroke = TRUE, 
+            dashArray = "3", 
+            weight = 2, 
+            color = "white", 
+            opacity = 1,
+            highlight = highlightOptions(weight = 5,
+                                         color = "#666",
+                                         dashArray = "",
+                                         fillOpacity = 0.7,
+                                         bringToFront = TRUE),
+            label = us.map$Name,
+            labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                           textsize = "15px",
+                           direction = "auto")) %>%
+addLegend(pal = pal, position = "topright", values = ~us.map$Population,
+          title = "Population")
+
+
+```
